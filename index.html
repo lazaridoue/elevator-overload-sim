@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Overload Elevator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: the shaft on the left, a lift control panel + controls on the right; stacks to one column on phones */
+:root{
+  --bg:#e8ebee; --surface:#f7f8f9; --ink:#1b2027; --muted:#56606b; --line:#cbd2d8;
+  --steel:#9aa4ae; --shaft:#dce1e6; --chip:#ffffff; --chip-ink:#1b2027;
+  --accent:#b8661a; --ok:#2a8653; --warn:#b8661a; --danger:#c0322a;
+  --panel:#1e2329; --panel-2:#2b3139; --panel-line:#3a424c; --panel-ink:#d4dae0; --panel-muted:#8c96a1; --readout:#ffb24a;
+  --f-display:"Oxanium","Barlow Condensed",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-label:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --row:78px; --shaft-w:150px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121519; --surface:#1a1e23; --ink:#e3e7eb; --muted:#99a3ad; --line:#2c3239;
+  --steel:#5d6670; --shaft:#16191d; --chip:#272d34; --chip-ink:#e3e7eb;
+  --accent:#ee9c45; --ok:#4fc283; --warn:#ee9c45; --danger:#f0604f;
+  --panel:#0d1013; --panel-2:#1a1f25; --panel-line:#2a3139; --panel-ink:#d4dae0; --panel-muted:#8c96a1; --readout:#ffb24a;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121519; --surface:#1a1e23; --ink:#e3e7eb; --muted:#99a3ad; --line:#2c3239;
+  --steel:#5d6670; --shaft:#16191d; --chip:#272d34; --chip-ink:#e3e7eb;
+  --accent:#ee9c45; --ok:#4fc283; --warn:#ee9c45; --danger:#f0604f;
+  --panel:#0d1013; --panel-2:#1a1f25; --panel-line:#2a3139; --panel-ink:#d4dae0; --panel-muted:#8c96a1; --readout:#ffb24a;
+  color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:grid;gap:28px}
+header{display:grid;gap:8px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4.5vw,42px);letter-spacing:.01em;margin:0;line-height:1.1;text-wrap:balance}
+.dek{margin:0;color:var(--muted);max-width:66ch}
+.plate{justify-self:start;font-family:var(--f-label);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:13px;border:1px solid var(--line);padding:4px 10px;border-radius:2px;background:var(--surface);font-variant-numeric:tabular-nums}
+h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;text-wrap:balance}
+h3{font-family:var(--f-label);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--muted);margin:0}
+
+.sim{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.sim{grid-template-columns:1fr}}
+
+/* Building */
+.building{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) var(--shaft-w);height:var(--row);border-bottom:1px dashed var(--line)}
+.row:last-child{border-bottom:0}
+.flabel{display:grid;place-items:center;font-family:var(--f-display);font-size:20px;color:var(--muted);border-right:1px solid var(--line)}
+.hall{position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:6px 10px;overflow:hidden;min-width:0}
+.lamp{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--steel);flex:none;margin-right:2px}
+.lamp.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent)}
+.chip{display:inline-flex;gap:3px;align-items:baseline;font-family:var(--f-label);font-size:13px;font-variant-numeric:tabular-nums;background:var(--chip);color:var(--chip-ink);border:1px solid var(--line);border-radius:3px;padding:1px 6px;line-height:1.35}
+.chip b{font-weight:600}
+.chip span{color:var(--muted)}
+.more{font-family:var(--f-label);font-size:13px;color:var(--muted)}
+.tag{position:absolute;right:8px;top:5px;font-family:var(--f-label);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid var(--warn);background:var(--surface);padding:0 6px;border-radius:2px;opacity:0;transition:opacity .25s}
+.tag.show{opacity:1}
+.shaft{position:absolute;top:0;bottom:0;right:0;width:var(--shaft-w);background:var(--shaft);border-left:1px solid var(--line)}
+.shaft::before,.shaft::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.shaft::before{left:38%}.shaft::after{left:62%}
+.car{position:absolute;left:10px;right:10px;height:calc(var(--row) - 10px);top:5px;border:2px solid var(--steel);border-radius:3px;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;z-index:1}
+.car.full{border-color:var(--warn)}
+.car.over{border-color:var(--danger);animation:pulse .55s ease-in-out infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 0 0 transparent}to{box-shadow:0 0 0 4px color-mix(in oklab,var(--danger) 45%,transparent)}}
+.cbar{height:16px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 5px;background:var(--panel);color:var(--readout);font-family:var(--f-display);font-size:11px;font-variant-numeric:tabular-nums}
+.inside{position:relative;flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:3px;padding:4px}
+.inside .chip{font-size:11px;padding:0 4px}
+.door{position:absolute;top:16px;bottom:0;width:50%;background:color-mix(in oklab,var(--steel) 80%,transparent);z-index:2}
+.door.l{left:0;border-right:1px solid var(--line)}.door.r{right:0;border-left:1px solid var(--line)}
+
+/* Control panel */
+.side{display:grid;gap:16px;min-width:0}
+.panel{background:var(--panel);color:var(--panel-ink);border-radius:4px;padding:18px;display:grid;gap:16px}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.floorbox{display:flex;align-items:center;gap:6px;background:#000;border:1px solid var(--panel-line);border-radius:3px;padding:4px 14px;min-width:96px;justify-content:center}
+.floorbox .num{font-family:var(--f-display);font-weight:700;font-size:56px;line-height:1;color:var(--readout);text-shadow:0 0 12px color-mix(in oklab,var(--readout) 55%,transparent);font-variant-numeric:tabular-nums}
+.floorbox .arr{font-size:22px;color:var(--readout);width:18px;text-align:center}
+.loadnum{font-family:var(--f-display);font-weight:500;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.loadnum small{font-size:16px;color:var(--panel-muted)}
+.loadsub{font-family:var(--f-label);font-size:14px;color:var(--panel-muted);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.status{display:flex;align-items:center;gap:10px;border:1px solid var(--panel-line);border-radius:3px;padding:8px 12px;background:var(--panel-2)}
+.status .dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.status[data-state="full"] .dot{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.status[data-state="over"] .dot{background:var(--danger);box-shadow:0 0 10px var(--danger);animation:blink .55s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.status b{font-family:var(--f-display);font-weight:700;letter-spacing:.06em;font-size:15px}
+.status span{color:var(--panel-muted);font-size:14px}
+.gauge{display:grid;gap:6px}
+.track{position:relative;height:14px;background:var(--panel-2);border:1px solid var(--panel-line);border-radius:2px}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--ok);transition:background .2s}
+.mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--panel-ink)}
+.ticks{position:relative;height:16px;font-family:var(--f-label);font-size:12px;color:var(--panel-muted);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ticks span:first-child{transform:none}
+
+/* Controls */
+.box{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px;display:grid;gap:14px;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+label.f{display:grid;gap:4px;font-family:var(--f-label);font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);min-width:0}
+select,input[type=number]{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:6px 8px;width:100%;text-transform:none;letter-spacing:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font-family:var(--f-label);font-weight:600;font-size:15px;letter-spacing:.04em;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:3px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--steel)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.err{color:var(--danger);font-size:14px;min-height:1em;margin:0}
+.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.val{font-variant-numeric:tabular-nums;color:var(--ink)}
+@media (max-width:520px){.fields{grid-template-columns:1fr 1fr}.fields .w{grid-column:1/-1}.settings{grid-template-columns:1fr}}
+.log{list-style:none;margin:0;padding:0;max-height:230px;overflow:auto;display:grid;gap:4px;font-size:14px}
+.log li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px}
+.log time{color:var(--muted);font-family:var(--f-label);font-variant-numeric:tabular-nums}
+.log li.over{color:var(--danger)}.log li.full{color:var(--warn)}.log li.ok{color:var(--ok)}
+
+/* Explainer */
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:880px){.explain{grid-template-columns:1fr}}
+.explain p{margin:0;max-width:64ch}
+.col{display:grid;gap:14px;min-width:0}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:460px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--muted);font-weight:600}
+td.z{white-space:nowrap;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+pre{margin:0;background:var(--panel);color:var(--panel-ink);border-radius:4px;padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+pre .c{color:var(--panel-muted)}pre .k{color:var(--readout)}
+ul.parts{margin:0;padding-left:18px;display:grid;gap:4px}
+@media (max-width:520px){:root{--row:70px;--shaft-w:116px}.floorbox .num{font-size:46px}.loadnum{font-size:28px}}
+@media (prefers-reduced-motion:reduce){.car.over,.status[data-state="over"] .dot{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Overload Elevator</h1>
+    <p class="dek">A one-car lift with a load cell under the floor. When it's nearly full it stops opening its doors for people waiting in the halls. When it's overloaded it keeps its doors open and refuses to move until someone steps off.</p>
+    <span class="plate" id="plate">Rated load 630 kg · 8 persons</span>
+  </header>
+
+  <div class="sim">
+    <section class="building" aria-label="Elevator shaft">
+      <div id="rows"></div>
+      <div class="shaft"><div class="car" id="car">
+        <div class="cbar"><span id="cKg">0 kg</span><span id="cPct">0%</span></div>
+        <div class="inside" id="inside"></div>
+        <div class="door l" id="dl"></div><div class="door r" id="dr"></div>
+      </div></div>
+    </section>
+
+    <div class="side">
+      <div class="panel">
+        <div class="readout">
+          <div class="floorbox"><span class="arr" id="arr"></span><span class="num" id="fnum">1</span></div>
+          <div>
+            <div class="loadnum"><span id="kg">0</span> <small>kg</small></div>
+            <div class="loadsub" id="pctTxt">0% of rated load</div>
+          </div>
+        </div>
+        <div class="status" id="status" data-state="normal" aria-live="polite"><span class="dot"></span><b id="stTitle">NORMAL</b><span id="stText">Answering all calls</span></div>
+        <div class="gauge">
+          <div class="track"><div class="fill" id="fill"></div><div class="mark" id="mBy"></div><div class="mark" id="mRated"></div></div>
+          <div class="ticks"><span style="left:0">0</span><span id="tBy">Bypass 80%</span><span id="tRated">Rated</span></div>
+        </div>
+      </div>
+
+      <form class="box" id="addForm">
+        <h3>Call the elevator</h3>
+        <div class="fields">
+          <label class="f">From floor<select id="aFloor"></select></label>
+          <label class="f">To floor<select id="aDest"></select></label>
+          <label class="f w">Weight (kg)<input type="number" id="aW" min="40" max="150" value="80"></label>
+        </div>
+        <div class="btns">
+          <button type="submit" class="primary">Add rider</button>
+          <button type="button" id="crowd">Add a crowd of 5</button>
+        </div>
+        <p class="err" id="err" role="alert"></p>
+      </form>
+
+      <div class="box">
+        <h3>Settings</h3>
+        <div class="settings">
+          <label class="f">Rated load<select id="rated">
+            <option value="450">450 kg · 6 persons</option>
+            <option value="630" selected>630 kg · 8 persons</option>
+            <option value="1000">1000 kg · 13 persons</option>
+          </select></label>
+          <label class="f">Bypass at <span class="val" id="byVal">80%</span><input type="range" id="bypass" min="60" max="95" step="5" value="80"></label>
+        </div>
+        <div class="btns">
+          <button type="button" id="pause">Pause</button>
+          <button type="button" id="speed">Speed 1×</button>
+          <button type="button" id="reset">Reset demo</button>
+          <button type="button" id="sound" aria-pressed="true">Buzzer sound on</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3>Controller log</h3>
+        <ul class="log" id="log"></ul>
+      </div>
+    </div>
+  </div>
+
+  <section class="explain">
+    <div class="col">
+      <h2>How the overload logic works</h2>
+      <p>A load cell under the car floor reports total weight many times a second. The controller compares it to the rated load on the nameplate and switches between three modes.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Load</th><th>Mode</th><th>Doors</th><th>Car</th></tr></thead>
+        <tbody>
+          <tr><td class="z"><span class="sw" style="background:var(--ok)"></span>under 80%</td><td>Normal</td><td>Open at every call</td><td>Moves normally</td></tr>
+          <tr><td class="z"><span class="sw" style="background:var(--warn)"></span>80–100%</td><td>Full-load bypass</td><td>Stay shut for hall calls; open only where riders get off</td><td>Passes floors where people wait</td></tr>
+          <tr><td class="z"><span class="sw" style="background:var(--danger)"></span>over 100%</td><td>Overload</td><td>Held open</td><td>Won't leave. Buzzer and OVERLOAD light until someone steps off</td></tr>
+        </tbody>
+      </table></div>
+      <p>Your idea of keeping the doors shut when the car is full is the bypass mode. Real elevators can't weigh someone before they step in, so when the car tips over the limit the doors do the opposite and stay open, so the last person can get back out.</p>
+    </div>
+    <div class="col">
+      <h3>The core rule, in Python</h3>
+<pre><span class="k">RATED_KG</span>    = 630    <span class="c"># nameplate: 8 persons x 75 kg</span>
+<span class="k">BYPASS_AT</span>   = 0.80   <span class="c"># full-load bypass threshold</span>
+<span class="k">OVERLOAD_AT</span> = 1.00
+
+<span class="k">def</span> on_load_reading(kg):
+    ratio = kg / RATED_KG
+    <span class="k">if</span> ratio &gt; OVERLOAD_AT:
+        hold_doors_open()
+        sound_buzzer()
+        show_sign(<span class="k">"OVERLOAD"</span>)
+        block_departure()
+    <span class="k">elif</span> ratio &gt;= BYPASS_AT:
+        skip_hall_calls()     <span class="c"># don't stop for new riders</span>
+        allow_departure()
+    <span class="k">else</span>:
+        answer_hall_calls()
+        allow_departure()</pre>
+      <h3>Build a desk-sized model</h3>
+      <ul class="parts">
+        <li>Bar load cell (5–20 kg) + HX711 amplifier as the scale under the car floor</li>
+        <li>Arduino Uno or ESP32 running the rule above</li>
+        <li>SG90 servo to slide the door, 28BYJ-48 stepper + ULN2003 driver to raise the car</li>
+        <li>Piezo buzzer, a red LED for OVERLOAD, push buttons for floor calls</li>
+        <li>Calibrate the scale with a known weight, then set a small rated load (say 500 g)</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+const FLOORS=6, MAX_SCALE=120;
+const $=id=>document.getElementById(id);
+const rowsEl=$('rows'), car=$('car'), inside=$('inside');
+let S=null, uid=0, logs=[], logVer=0, renderedLog=-1, renderedVer=-1, speed=1, paused=false, soundOn=true, interacted=false, ac=null;
+
+// Build floors
+for(let f=FLOORS;f>=1;f--){
+  const r=document.createElement('div'); r.className='row';
+  r.innerHTML=`<div class="flabel">${f}</div><div class="hall" id="h${f}"><span class="lamp" id="l${f}"></span><span class="ch" id="c${f}" style="display:contents"></span><span class="tag" id="t${f}">Passed · car full</span></div><div></div>`;
+  rowsEl.appendChild(r);
+}
+['aFloor','aDest'].forEach((id,i)=>{const s=$(id);for(let f=1;f<=FLOORS;f++){const o=new Option(f,f);s.add(o)}s.value=i?5:2});
+
+function person(w,dest){return{id:++uid,w,dest}}
+function load(){return S.car.reduce((a,p)=>a+p.w,0)}
+function pct(){return load()/S.rated*100}
+function bypassOn(){return pct()>=S.bypass}
+function bump(){S.ver++}
+function fmt(t){const s=Math.floor(t);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function log(msg,cls=''){logs.unshift({t:fmt(S.clock),msg,cls});if(logs.length>60)logs.pop();logVer++}
+
+function reset(){
+  uid=0;logs=[];
+  S={pos:1,dir:0,phase:'idle',t:0,door:0,car:[],wait:{},rated:+$('rated').value,bypass:+$('bypass').value,
+     blocked:false,skip:null,over:null,clock:0,shown:0,flash:{},ver:0,beepT:0,wasFull:false};
+  for(let f=1;f<=FLOORS;f++)S.wait[f]=[];
+  [[85,4],[92,6],[78,5],[110,4],[95,6],[88,5],[102,3]].forEach(([w,d])=>S.wait[1].push(person(w,d)));
+  S.wait[3].push(person(70,1),person(64,6));
+  S.wait[5].push(person(76,1));
+  log('Car parked at floor 1. 7 people waiting in the lobby, 650 kg in total.');
+}
+
+function stops(){
+  const s=new Set(S.car.map(p=>p.dest));
+  if(!bypassOn()) for(let f=1;f<=FLOORS;f++) if(S.wait[f].length) s.add(f);
+  if(S.skip!==null) s.delete(S.skip);
+  return [...s];
+}
+function arrive(f){S.pos=f;S.phase='opening';S.t=0;S.blocked=false;bump()}
+
+function move(dt){
+  const st=stops(), here=Math.round(S.pos), at=Math.abs(S.pos-here)<1e-4;
+  if(at && st.includes(here)){arrive(here);return}
+  let ahead=S.dir>0?st.filter(x=>x>S.pos):S.dir<0?st.filter(x=>x<S.pos):[];
+  if(!ahead.length){
+    const up=st.filter(x=>x>S.pos), dn=st.filter(x=>x<S.pos);
+    if(!at){ahead=[S.dir>0?Math.ceil(S.pos):Math.floor(S.pos)]}
+    else if(up.length&&(S.dir>=0||!dn.length)){S.dir=1;ahead=up}
+    else if(dn.length){S.dir=-1;ahead=dn}
+    else{S.dir=0;S.phase='idle';return}
+  }
+  const next=S.dir>0?Math.min(...ahead):Math.max(...ahead);
+  S.phase='moving';
+  const old=S.pos, np=old+S.dir*1.1*dt;
+  // floors passed without stopping
+  if(S.dir>0){for(let k=Math.floor(old)+1;k<=np&&k<next;k++)passed(k)}
+  else{for(let k=Math.ceil(old)-1;k>=np&&k>next;k--)passed(k)}
+  if((S.dir>0&&np>=next)||(S.dir<0&&np<=next)){
+    S.pos=next; if(st.includes(next))arrive(next); else S.phase='idle';
+  } else S.pos=np;
+}
+function passed(k){
+  if(S.wait[k].length&&bypassOn()){S.flash[k]=S.clock;log(`Passed floor ${k} without opening: car at ${Math.round(pct())}%, ${S.wait[k].length} waiting.`,'full')}
+}
+
+function tick(dt){
+  S.clock+=dt;S.t+=dt;
+  if(S.skip!==null&&Math.abs(S.pos-S.skip)>0.01)S.skip=null;
+  const f=Math.round(S.pos);
+  switch(S.phase){
+    case 'opening':
+      S.door=Math.min(1,S.door+dt/0.7);
+      if(S.door>=1){S.phase='unloading';S.t=0}
+      break;
+    case 'unloading':
+      if(S.t>=0.45){S.t=0;
+        const i=S.car.findIndex(p=>p.dest===f);
+        if(i>=0){const p=S.car.splice(i,1)[0];bump();log(`Floor ${f}: ${p.w} kg rider out. Load ${load()} kg.`)}
+        else{S.phase='boarding';S.t=0.3}}
+      break;
+    case 'boarding':
+      if(load()>S.rated){startOverload(S.car[S.car.length-1]);break}
+      if(S.blocked||!S.wait[f].length){S.phase='closing';S.t=0;break}
+      if(S.t>=0.6){S.t=0;
+        const p=S.wait[f].shift();S.car.push(p);bump();
+        const kg=load();
+        if(kg>S.rated)startOverload(p);
+        else log(`Floor ${f}: ${p.w} kg rider in, going to ${p.dest}. Load ${kg} kg (${Math.round(kg/S.rated*100)}%).`)}
+      break;
+    case 'overload':
+      S.beepT-=dt; if(S.beepT<=0){beep();S.beepT=0.55}
+      if(S.t>=2.4){
+        const p=S.over,i=S.car.indexOf(p);if(i>=0)S.car.splice(i,1);
+        S.wait[f].unshift(p);S.over=null;S.blocked=true;bump();
+        log(`${p.w} kg rider stepped back off. Load ${load()} kg, under the limit. Doors can close.`,'ok');
+        S.phase='boarding';S.t=0}
+      break;
+    case 'closing':
+      if(load()>S.rated||(S.wait[f].length&&!S.blocked)){S.phase='opening';break}
+      S.door=Math.max(0,S.door-dt/0.7);
+      if(S.door<=0){if(S.blocked)S.skip=f;S.blocked=false;S.phase='moving';S.t=0}
+      break;
+    default: move(dt);
+  }
+  const full=bypassOn()&&load()<=S.rated;
+  if(S.phase!=='overload'&&full!==S.wasFull){
+    log(full?`Load ${Math.round(pct())}%: full-load bypass on. Doors stay shut for hall calls.`:`Load under ${S.bypass}%: answering hall calls again.`,full?'full':'ok');
+    S.wasFull=full}
+}
+function startOverload(p){
+  S.phase='overload';S.t=0;S.over=p;S.beepT=0;
+  log(`OVERLOAD: ${load()} kg in a ${S.rated} kg car. Doors held open, buzzer on, car will not move.`,'over');
+}
+function beep(){
+  if(!soundOn||!interacted)return;
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=540;g.gain.value=0.05;
+    o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+0.22)}catch(e){}
+}
+
+// Rendering
+function chipHTML(p,small){return small?`<span class="chip"><b>${p.w}</b></span>`:`<span class="chip"><b>${p.w}</b><span>→${p.dest}</span></span>`}
+function render(){
+  const rowH=rowsEl.firstElementChild.offsetHeight;
+  car.style.top=((FLOORS-S.pos)*rowH+5)+'px';
+  const dw=(1-S.door)*50+'%';$('dl').style.width=dw;$('dr').style.width=dw;
+  const kgNow=load();S.shown+=(kgNow-S.shown)*0.2;if(Math.abs(kgNow-S.shown)<0.5)S.shown=kgNow;
+  const shown=Math.round(S.shown), p=Math.round(shown/S.rated*100);
+  const state=S.phase==='overload'?'over':p>=S.bypass?'full':'normal';
+  car.className='car'+(state==='over'?' over':state==='full'?' full':'');
+  $('cKg').textContent=shown+' kg';$('cPct').textContent=p+'%';
+  $('kg').textContent=shown;$('pctTxt').textContent=`${p}% of ${S.rated} kg rated load`;
+  $('fnum').textContent=S.phase==='overload'?'OL':Math.round(S.pos);
+  $('arr').textContent=S.phase==='moving'?(S.dir>0?'▲':'▼'):'';
+  const st=$('status');
+  if(st.dataset.state!==state){st.dataset.state=state;
+    $('stTitle').textContent={normal:'NORMAL',full:'FULL LOAD',over:'OVERLOAD'}[state];
+    $('stText').textContent={normal:'Answering all calls',full:'Skipping hall calls',over:'Doors held open · car won’t move'}[state]}
+  const fill=$('fill');fill.style.width=Math.min(p,MAX_SCALE)/MAX_SCALE*100+'%';
+  fill.style.background=state==='over'?'var(--danger)':state==='full'?'var(--warn)':'var(--ok)';
+  for(let f=1;f<=FLOORS;f++)$('t'+f).classList.toggle('show',S.flash[f]!=null&&S.clock-S.flash[f]<1.8);
+  if(renderedVer!==S.ver){renderedVer=S.ver;
+    for(let f=1;f<=FLOORS;f++){const w=S.wait[f],lim=window.innerWidth<520?3:5;
+      $('l'+f).classList.toggle('on',w.length>0);
+      $('c'+f).innerHTML=w.slice(0,lim).map(p=>chipHTML(p)).join('')+(w.length>lim?`<span class="more">+${w.length-lim}</span>`:'')}
+    inside.innerHTML=S.car.map(p=>chipHTML(p,true)).join('')}
+  if(renderedLog!==logVer){renderedLog=logVer;
+    $('log').innerHTML=logs.map(l=>`<li class="${l.cls}"><time>${l.t}</time><span>${l.msg}</span></li>`).join('')}
+}
+function placeMarks(){
+  const b=S.bypass/MAX_SCALE*100, r=100/MAX_SCALE*100;
+  $('mBy').style.left=b+'%';$('mRated').style.left=r+'%';
+  $('tBy').style.left=b+'%';$('tRated').style.left=r+'%';
+  $('tBy').textContent='Bypass '+S.bypass+'%';$('tRated').textContent='Rated '+S.rated;
+  $('byVal').textContent=S.bypass+'%';
+  const persons={450:6,630:8,1000:13}[S.rated];
+  $('plate').textContent=`Rated load ${S.rated} kg · ${persons} persons`;
+}
+
+let last=performance.now();
+function loop(now){
+  let dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(!paused){const n=speed;for(let i=0;i<n;i++)tick(dt)}
+  render();requestAnimationFrame(loop);
+}
+
+// Controls
+document.addEventListener('pointerdown',()=>{interacted=true},{once:false});
+$('addForm').addEventListener('submit',e=>{
+  e.preventDefault();interacted=true;
+  const f=+$('aFloor').value,d=+$('aDest').value,w=Math.round(+$('aW').value);
+  if(f===d){$('err').textContent='Pick a destination different from the starting floor.';return}
+  if(!(w>=40&&w<=150)){$('err').textContent='Enter a weight between 40 and 150 kg.';return}
+  $('err').textContent='';
+  S.wait[f].push(person(w,d));bump();log(`Hall call at floor ${f}: ${w} kg rider going to ${d}.`);
+});
+$('crowd').addEventListener('click',()=>{
+  const f=1+Math.floor(Math.random()*FLOORS);let total=0;
+  for(let i=0;i<5;i++){let d;do{d=1+Math.floor(Math.random()*FLOORS)}while(d===f);
+    const w=55+Math.floor(Math.random()*55);total+=w;S.wait[f].push(person(w,d))}
+  bump();log(`5 people arrived at floor ${f} (${total} kg).`);
+});
+$('rated').addEventListener('change',e=>{S.rated=+e.target.value;placeMarks();log(`Rated load set to ${S.rated} kg.`)});
+$('bypass').addEventListener('input',e=>{S.bypass=+e.target.value;placeMarks()});
+$('pause').addEventListener('click',e=>{paused=!paused;e.target.textContent=paused?'Resume':'Pause'});
+$('speed').addEventListener('click',e=>{speed=speed===1?2:speed===2?4:1;e.target.textContent=`Speed ${speed}×`});
+$('reset').addEventListener('click',()=>{reset();placeMarks();renderedVer=-1});
+$('sound').addEventListener('click',e=>{soundOn=!soundOn;e.target.setAttribute('aria-pressed',soundOn);e.target.textContent=soundOn?'Buzzer sound on':'Buzzer sound off'});
+window.addEventListener('resize',()=>{renderedVer=-1});
+
+reset();placeMarks();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
